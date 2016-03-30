@@ -95,6 +95,7 @@
     this.attr('src','');
     var i;
     var onscrollImageArray = ImageLoader.toArray(this);
+      // if not pipeline on scroll
     var loadImage = function() {
       //on scroll loading array
       if (onscrollImageArray.length > 0) {
@@ -116,24 +117,85 @@
             }
         }
     }
-
     //on window resize we should invoke the event
     $(window).resize(function () {
         ImageLoader.windowHeight = $(window).height();
         setTimeout(function(){
-          loadImage();
+            loadImage();
         },1500);
     });
 
     //on window resize we should invoke the event
     $(window).scroll(function () {
       setTimeout(function(){
-        loadImage();
+          loadImage();
       },1500);
     });
     loadImage();
 
     return this;
+  }
+
+
+  ImageLoader.prototype.onscrollSequentially = function(options) {
+    var options = $.extend({},ImageLoader.options,options);
+    var css = ImageLoader.options.css
+    css['background-image'] = 'url('+options.loaderImg+')';
+    this.css(css);
+    var srcs = this.map(function(){
+      return $(this).attr('src');
+    });
+    this.attr('src','');
+
+    var onscrollPipelineArray = ImageLoader.toArray(this);
+    var isOnScrollPipelineStackRunning = false;
+    var loadImage = function() {
+      if (onscrollPipelineArray.length > 0) {
+        console.log(isOnScrollPipelineStackRunning);
+          if (isOnScrollPipelineStackRunning == false) {
+              startOnScrollPipelineLoading();
+          }
+      }
+    }
+
+    var startOnScrollPipelineLoading = function() {
+      var found = false;
+      for (var i = 0; i < onscrollPipelineArray.length; i++) {
+          if (ImageLoader.isImageLocatedInVisibleArea(onscrollPipelineArray[i]) == true) {
+              found = true;
+              var img = onscrollPipelineArray[i],src = srcs[i];
+              ImageLoader.loadImage(img,src,options.failedSrc,function(hasError){
+                if(hasError) {
+                  if(options.error && typeof options.error == 'function') {
+                    options.error(img,src,i);
+                  }
+                } else {
+                  if(options.loaded && typeof options.loaded == 'function') {
+                    options.loaded(img,onscrollPipelineArray.indexOf(img));
+                  }
+                }
+                //startOnScrollPipelineLoading();
+              });
+          }
+      }
+      isOnScrollPipelineStackRunning = found;
+    }
+
+
+    $(window).resize(function () {
+        ImageLoader.windowHeight = $(window).height();
+        setTimeout(function(){
+            loadImage();
+        },1500);
+    });
+
+    //on window resize we should invoke the event
+    $(window).scroll(function () {
+      setTimeout(function(){
+          loadImage();
+      },1500);
+    });
+    loadImage();
   }
 
   /**
@@ -142,7 +204,6 @@
 
 
   var defaults = {
-
       "error": null,
       "loaded": null,
       "loaderImg": "loader.gif",
@@ -164,6 +225,8 @@
   $.fn.onscrollImgLoading = loader.onscroll;
 
   $.fn.loadSequentially = loader.pipeline;
+
+  //$.fn.onscrollSequentially = loader.onscrollSequentially;
 
   //$(function(){
     // manually show images on load if showOnLoad class is given

@@ -88,16 +88,16 @@
 <script src="jquery.imglazyload.js" type="text/javascript"></script>
 <script type="text/javascript">
   $(".hide").showOnLoad();
-  // $('.img-group').loadSequentially({
-  //   error: function(img,src,index) {
-  //     console.log(img,src,index);
-  //   },
-  //   loaded: function(img,index) {
-  //     console.log(img,index);
-  //   },
-  //   loaderImg: "loader.gif",
-  //   errorImg: "no-image.jpg"
-  // });
+  $('.img-group').loadSequentially({
+    error: function(img,src,index) {
+      console.log(img,src,index);
+    },
+    loaded: function(img,index) {
+      console.log(img,index);
+    },
+    loaderImg: "loader.gif",
+    errorImg: "no-image.jpg"
+  });
   $('.onscroll').onscrollImgLoading({
     error: function(img,src,index) {
       console.log(img,src,index);
