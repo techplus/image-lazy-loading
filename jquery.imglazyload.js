@@ -11,6 +11,8 @@
       return tempArray;
   }
 
+  ImageLoader.windowHeight = $(window).height();
+
   ImageLoader.loadImage = function(element, src, failedSrc, callback) {
     var img = $('<img />').attr('src',src);
     img.load(function(){
@@ -25,6 +27,18 @@
     });
   }
 
+  ImageLoader.isImageLocatedInVisibleArea = function(element) {
+    if (element) {
+        var top = element.offset().top;
+        var scrolltop = $(window).scrollTop();
+        if (top > scrolltop && top < scrolltop + ImageLoader.windowHeight) {
+            return true;
+        }
+    }
+    return false;
+  }
+
+
 /**
 ** show images on load functionality
 **/
@@ -38,7 +52,7 @@
   **/
 
   ImageLoader.prototype.pipeline = function(options) {
-    var options = $.extend({},ImageLoader.options.loadSequentially,options);
+    var options = $.extend({},ImageLoader.options,options);
     var css = ImageLoader.options.css
     css['background-image'] = 'url('+options.loaderImg+')';
     this.css(css);
@@ -67,8 +81,60 @@
       });
     }
     startLoading();
+    return this;
   }
 
+  ImageLoader.prototype.onscroll = function(options) {
+    var options = $.extend({},ImageLoader.options,options);
+    var css = ImageLoader.options.css
+    css['background-image'] = 'url('+options.loaderImg+')';
+    this.css(css);
+    var srcs = this.map(function(){
+      return $(this).attr('src');
+    });
+    this.attr('src','');
+    var i;
+    var onscrollImageArray = ImageLoader.toArray(this);
+    var loadImage = function() {
+      //on scroll loading array
+      if (onscrollImageArray.length > 0) {
+          for (i = 0; i < onscrollImageArray.length; i++) {
+              if (ImageLoader.isImageLocatedInVisibleArea(onscrollImageArray[i]) == true) {
+                  var img = onscrollImageArray[i],src = srcs[i];
+                  ImageLoader.loadImage(img,src, options.errorImg,function(hasError){
+                    if(hasError) {
+                      if(options.error && typeof options.error == 'function') {
+                        options.error(img,src,i);
+                      }
+                    } else {
+                      if(options.loaded && typeof options.loaded == 'function') {
+                        options.loaded(img,onscrollImageArray.indexOf(img));
+                      }
+                    }
+                  });
+                }
+            }
+        }
+    }
+
+    //on window resize we should invoke the event
+    $(window).resize(function () {
+        ImageLoader.windowHeight = $(window).height();
+        setTimeout(function(){
+          loadImage();
+        },1500);
+    });
+
+    //on window resize we should invoke the event
+    $(window).scroll(function () {
+      setTimeout(function(){
+        loadImage();
+      },1500);
+    });
+    loadImage();
+
+    return this;
+  }
 
   /**
   * define all jquery fn
@@ -76,18 +142,17 @@
 
 
   var defaults = {
-    loadSequentially: {
+
       "error": null,
       "loaded": null,
       "loaderImg": "loader.gif",
-      "errorImg": "no-image.jpg"
-    },
-    css:{
-      'background-image':'url(loader.gif)',
-      'background-color': '#f8f8f8',
-      'background-repeat':'no-repeat',
-      'background-position':'50%'
-    }
+      "errorImg": "no-image.jpg",
+      css:{
+        'background-image':'url(loader.gif)',
+        'background-color': '#f8f8f8',
+        'background-repeat':'no-repeat',
+        'background-position':'50%'
+      }
   }
 
   ImageLoader.options = defaults;
@@ -96,14 +161,14 @@
 
   $.fn.showOnLoad = loader.showOnLoad;
 
-
+  $.fn.onscrollImgLoading = loader.onscroll;
 
   $.fn.loadSequentially = loader.pipeline;
 
   //$(function(){
     // manually show images on load if showOnLoad class is given
-    $('.showOnLoad').showOnLoad();
-    $('.loadSequentially').loadSequentially();
+    // $('.showOnLoad').showOnLoad();
+    // $('.loadSequentially').loadSequentially();
   //});
 
 })(jQuery);
